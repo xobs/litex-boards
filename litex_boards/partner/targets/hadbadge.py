@@ -10,6 +10,9 @@ import sys
 from migen import *
 from migen.genlib.resetsync import AsyncResetSynchronizer
 
+from valentyusb.valentyusb.usbcore.cpu.dummyusb import DummyUsb
+from valentyusb.valentyusb.usbcore import io as usbio
+
 from litex_boards.platforms import hadbadge
 
 from litex.soc.cores.clock import *
@@ -122,7 +125,7 @@ class BaseSoC(SoCCore):
         SoCCore.__init__(self, platform, clk_freq,
                          integrated_rom_size=16384,
                          integrated_sram_size=65536,
-                         wishbone_timeout_cycles=1e9,
+                         wishbone_timeout_cycles=1e7,
                          **kwargs)
 
         self.submodules.crg = _CRG(self.platform)
@@ -133,19 +136,19 @@ class BaseSoC(SoCCore):
 #        ], 0)
 
         # Add a "USB" module to let us debug the device.
-#        usb_pads = platform.request("usb")
-#        usb_iobuf = usbio.IoBuf(usb_pads.d_p, usb_pads.d_n, usb_pads.pullup)
-#        self.submodules.usb = ClockDomainsRenamer({
-#            "usb_48": "clk48",
-#            "usb_12": "clk12",
-#        })(DummyUsb(usb_iobuf, debug=debug, product="Hackaday Supercon Badge"))
+        usb_pads = platform.request("usb")
+        usb_iobuf = usbio.IoBuf(usb_pads.d_p, usb_pads.d_n, usb_pads.pullup)
+        self.submodules.usb = ClockDomainsRenamer({
+            "usb_48": "clk48",
+            "usb_12": "clk12",
+        })(DummyUsb(usb_iobuf, debug=debug, product="Hackaday Supercon Badge", cdc=True))
 
-#        if debug:
-#            self.add_wb_master(self.usb.debug_bridge.wishbone)
-#
-#            if self.cpu_type is not None:
-#                self.register_mem("vexriscv_debug", 0xf00f0000, self.cpu.debug_bus, 0x200)
-#                self.cpu.use_external_variant("rtl/VexRiscv_HaD_Debug.v")
+        if debug:
+            self.add_wb_master(self.usb.debug_bridge.wishbone)
+
+            if self.cpu_type is not None:
+                self.register_mem("vexriscv_debug", 0xb00f0000, self.cpu.debug_bus, 0x200)
+                self.cpu.use_external_variant("VexRiscv_HaD_Debug.v")
 #        elif self.cpu_type is not None:
 #            self.cpu.use_external_variant("rtl/VexRiscv_HaD.v")
 
